@@ -1,8 +1,0 @@
-{
-  "cron": [
-    {
-      "path": "/api/cron/sync-incoming",
-      "schedule": "*/5 * * * *"
-    }
-  ]
-}
