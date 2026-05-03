@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model TransactionActivity {
+  id           String   @id @default(cuid())
+  wallet       String
+  counterparty String
+  direction    String
+  amount       String
+  txHash       String
+  eventKey     String   @unique
+  status       String
+  blockNumber  String?
+
+  aiVerdict    String?
+  aiConfidence Int?
+  aiReason     String?
+
+  createdAt    DateTime @default(now())
+}
+
+model SharedProfile {
+  id         String   @id @default(cuid())
+  wallet     String
+  shareId    String   @unique
+  score      Int
+  label      String
+  trend      String
+  summary    String
+  visibility String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model WalletSyncState {
+  id               String   @id @default(cuid())
+  wallet           String   @unique
+  lastScannedBlock String
+  updatedAt        DateTime @updatedAt
+}
+
+model WalletBalanceSnapshot {
+  id        String   @id @default(cuid())
+  wallet    String   @unique
+  balance   String
+  updatedAt DateTime @updatedAt
+}
