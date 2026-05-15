@@ -22,6 +22,12 @@ model TransactionActivity {
   aiConfidence Int?
   aiReason     String?
   aiVerdict    String?
+
+  @@index([wallet])
+  @@index([counterparty])
+  @@index([txHash])
+  @@index([createdAt])
+  @@index([wallet, createdAt])
 }
 
 model SharedProfile {
