@@ -30,9 +30,9 @@ export default function AnalyticsSummary() {
     async function load() {
       if (!address) return;
 
-      setLoading(true);
-
       try {
+        setLoading(true);
+
         const res = await fetch(`/api/transactions?wallet=${address}`);
         const result = await res.json();
 
@@ -49,11 +49,8 @@ export default function AnalyticsSummary() {
         activities.forEach((tx) => {
           const amount = Number(tx.amount);
 
-          if (tx.direction === "incoming") {
-            incoming += amount;
-          } else {
-            outgoing += amount;
-          }
+          if (tx.direction === "incoming") incoming += amount;
+          if (tx.direction === "outgoing") outgoing += amount;
 
           if (tx.direction === "outgoing" && tx.aiVerdict) {
             aiReviewed += 1;
@@ -102,37 +99,49 @@ export default function AnalyticsSummary() {
     };
   }, [address, isConnected]);
 
+  const netFlow = stats.incoming - stats.outgoing;
+
   return (
     <div className="space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
       <div>
-        <h2 className="text-xl font-semibold">Activity Summary</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Cashflow activity plus AI payment review insights.
+        <h2 className="text-xl font-semibold text-slate-950">
+          Cashflow Health
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-slate-500">
+          A calm read on inflow, outflow, and reviewed payment pressure.
         </p>
       </div>
 
-      {loading && <p className="text-sm text-slate-500">Loading...</p>}
+      {loading && (
+        <p className="text-sm text-slate-500">Reading cashflow health...</p>
+      )}
 
       {!loading && (
         <>
           <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="rounded-2xl border border-slate-100 p-4">
-              <p className="text-sm text-slate-500">Incoming</p>
-              <p className="text-lg font-semibold">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Inflow</p>
+              <p className="text-lg font-semibold text-slate-950">
                 {stats.incoming.toFixed(2)}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-100 p-4">
-              <p className="text-sm text-slate-500">Outgoing</p>
-              <p className="text-lg font-semibold">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Outflow</p>
+              <p className="text-lg font-semibold text-slate-950">
                 {stats.outgoing.toFixed(2)}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-100 p-4">
-              <p className="text-sm text-slate-500">Transactions</p>
-              <p className="text-lg font-semibold">{stats.count}</p>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Net Flow</p>
+              <p
+                className={`text-lg font-semibold ${
+                  netFlow >= 0 ? "text-emerald-600" : "text-amber-600"
+                }`}
+              >
+                {netFlow.toFixed(2)}
+              </p>
             </div>
           </div>
 
@@ -140,10 +149,10 @@ export default function AnalyticsSummary() {
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-indigo-700">
-                  AI Payment Agent
+                  Payment Intelligence
                 </p>
                 <p className="text-xs text-slate-500">
-                  Reviews saved from outgoing payments.
+                  Reviewed outgoing payments before wallet signing.
                 </p>
               </div>
 
@@ -154,28 +163,28 @@ export default function AnalyticsSummary() {
 
             <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
               <div className="rounded-2xl bg-white p-3">
-                <p className="text-xs text-slate-400">Safe</p>
+                <p className="text-xs text-slate-400">Manageable</p>
                 <p className="text-lg font-bold text-emerald-600">
                   {stats.aiSafe}
                 </p>
               </div>
 
               <div className="rounded-2xl bg-white p-3">
-                <p className="text-xs text-slate-400">Risky</p>
+                <p className="text-xs text-slate-400">Needs review</p>
                 <p className="text-lg font-bold text-amber-600">
                   {stats.aiRisky}
                 </p>
               </div>
 
               <div className="rounded-2xl bg-white p-3">
-                <p className="text-xs text-slate-400">Blocked</p>
+                <p className="text-xs text-slate-400">Elevated risk</p>
                 <p className="text-lg font-bold text-rose-600">
                   {stats.aiNotRecommended}
                 </p>
               </div>
 
               <div className="rounded-2xl bg-white p-3">
-                <p className="text-xs text-slate-400">Avg confidence</p>
+                <p className="text-xs text-slate-400">Confidence</p>
                 <p className="text-lg font-bold text-slate-900">
                   {stats.avgConfidence}%
                 </p>
@@ -184,12 +193,14 @@ export default function AnalyticsSummary() {
           </div>
 
           <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-            <p className="text-sm text-slate-600">
-              {stats.incoming > stats.outgoing
-                ? "You are net positive. Your inflow exceeds your spending."
-                : stats.incoming < stats.outgoing
-                  ? "Your spending is higher than your inflow. Monitor cashflow closely."
-                  : "Your inflow and outflow are balanced."}
+            <p className="text-sm leading-6 text-slate-600">
+              {stats.count === 0
+                ? "No cashflow pattern yet. Activity will appear here once funds move."
+                : stats.incoming > stats.outgoing
+                  ? "Your inflow is currently stronger than your outflow. That improves your financial behavior signal."
+                  : stats.incoming < stats.outgoing
+                    ? "Your outflow is currently higher than your inflow. PocketFlow will treat larger payments with more caution."
+                    : "Your inflow and outflow are currently balanced."}
             </p>
           </div>
         </>

@@ -92,7 +92,7 @@ export default async function SharedProfilePage({ params }: PageProps) {
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-12">
-      <Card className="overflow-hidden border-indigo-100 bg-gradient-to-br from-white via-indigo-50 to-slate-50">
+      <Card className="overflow-hidden border-indigo-100 bg-linear-to-br from-white via-indigo-50 to-slate-50">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
             <p className="w-fit rounded-full border border-indigo-100 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">

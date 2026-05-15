@@ -7,70 +7,100 @@ import ActivityChart from "@/components/ActivityChart";
 import WalletConnect from "@/components/WalletConnect";
 import AutoIncomingSync from "@/components/AutoIncomingSync";
 import AIAgentExplainerCard from "@/components/AIAgentExplainerCard";
+import FinancialStateCard from "@/components/FinancialStateCard";
+import InsightFeed from "@/components/InsightFeed";
 import { Card } from "@/components/ui/Card";
 import Link from "next/link";
 
 const quickActions = [
   {
     href: "/send",
-    title: "AI Send",
-    description: "Send USDC with payment safety analysis.",
+    title: "Review Payment",
+    description: "Understand payment pressure before signing.",
     featured: true,
   },
   {
     href: "/receive",
     title: "Receive",
-    description: "Share your address and sync incoming funds.",
+    description: "Accept stablecoin inflow into your behavior history.",
   },
   {
     href: "/profile",
     title: "Profile",
-    description: "Control your proof-of-cashflow identity.",
+    description: "Control how your cashflow identity is shared.",
   },
   {
     href: "/test-registry",
-    title: "Visibility",
-    description: "Change private, public, or shared profile mode.",
+    title: "Privacy Controls",
+    description: "Switch between private, public, and shared visibility.",
   },
   {
     href: "/score",
-    title: "Score",
-    description: "Understand your cashflow reputation.",
+    title: "Behavior Signal",
+    description: "See how PocketFlow reads your cashflow quality.",
   },
 ];
 
 export default function DashboardPage() {
   return (
     <main className="space-y-6">
-      <Card className="overflow-hidden border-indigo-100 bg-gradient-to-br from-white via-indigo-50 to-slate-50 p-6">
+      <Card className="overflow-hidden border-indigo-100 bg-linear-to-br from-white via-indigo-50 to-slate-50 p-6">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl space-y-5">
-            <p className="w-fit rounded-full border border-indigo-100 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">
-              PocketFlow on Arc
-            </p>
+          <div className="max-w-4xl space-y-6">
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="w-fit rounded-full border border-indigo-100 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">
+                POCKETFLOW ON ARC
+              </p>
 
-            <div className="space-y-3">
-              <h1 className="text-4xl font-bold leading-tight tracking-tight text-slate-950 sm:text-5xl">
-                A mini bank for stablecoin payments and proof-of-cashflow.
-              </h1>
+              <p className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                Wallet-controlled
+              </p>
 
-              <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                Send and receive Arc testnet USDC, track real wallet activity,
-                and build a user-controlled financial profile with AI payment
-                review before signing.
+              <p className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                Advisory, not custodial
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-                Auto incoming sync
-              </span>
-              <span className="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
-                AI payment review
-              </span>
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
-                Private / public / shared profile
-              </span>
+            <div className="space-y-4">
+              <h1 className="max-w-4xl text-4xl font-bold leading-tight tracking-tight text-slate-950 sm:text-5xl">
+                PocketFlow- Smart Banking With Cashflow Intelligence
+                
+              </h1>
+
+              <p className="max-w-2xl text-sm leading-7 text-slate-600">
+                PocketFlow analyzes stablecoin activity, cashflow patterns, and 
+                spending behavior so every payment is backed by 
+                financial insight
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-slate-100 bg-white/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Monitor
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-950">
+                  Live cashflow activity
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-white/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Review
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-950">
+                  Payment review before signing
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-white/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Control
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-950">
+                  Private, public, or shared identity
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-3 pt-1">
@@ -78,7 +108,7 @@ export default function DashboardPage() {
                 href="/send"
                 className="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
               >
-                Send with AI
+                Review a Payment
               </Link>
 
               <Link
@@ -97,6 +127,11 @@ export default function DashboardPage() {
       </Card>
 
       <AutoIncomingSync />
+
+      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <FinancialStateCard />
+        <InsightFeed />
+      </section>
 
       <AIAgentExplainerCard />
 
@@ -117,10 +152,11 @@ export default function DashboardPage() {
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h2 className="text-xl font-semibold tracking-tight text-slate-950">
-              Quick Actions
+              Operating Actions
             </h2>
             <p className="text-sm leading-6 text-slate-500">
-              Move money, review cashflow, and control your financial identity.
+              Move through PocketFlow by reviewing payments, receiving flow, and
+              controlling your financial identity.
             </p>
           </div>
 
@@ -128,11 +164,11 @@ export default function DashboardPage() {
             href="/send"
             className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
           >
-            Start AI Send →
+            Review payment →
           </Link>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5S">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {quickActions.map((action) => (
             <Link
               key={action.href}

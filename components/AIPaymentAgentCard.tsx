@@ -70,18 +70,14 @@ export default function AIPaymentAgentCard({
       setAnalysis(null);
       onAnalysisChange?.(null);
 
-      if (!wallet || !wallet.startsWith("0x") || numericAmount <= 0) {
-        return;
-      }
+      if (!wallet || !wallet.startsWith("0x") || numericAmount <= 0) return;
 
       setLoading(true);
 
       try {
         const res = await fetch("/api/ai/analyze-payment", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             wallet,
             amount: numericAmount,
@@ -94,7 +90,7 @@ export default function AIPaymentAgentCard({
         const data = await res.json();
 
         if (!res.ok) {
-          throw new Error(data.error || "Payment analysis failed.");
+          throw new Error(data.error || "Payment review failed.");
         }
 
         if (!cancelled) {
@@ -106,13 +102,11 @@ export default function AIPaymentAgentCard({
           setError(
             err instanceof Error
               ? err.message
-              : "Unable to analyze payment safety."
+              : "Unable to review payment risk."
           );
         }
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
@@ -135,21 +129,30 @@ export default function AIPaymentAgentCard({
 
   const verdictLabel =
     displayVerdict === "safe"
-      ? "Safe to pay"
+      ? "Financially manageable"
       : displayVerdict === "risky"
-        ? "Risky payment"
+        ? "Review before signing"
         : displayVerdict === "not_recommended"
-          ? "Not recommended"
-          : "Waiting for payment details";
+          ? "Elevated risk detected"
+          : "Awaiting payment details";
 
   const loadingLabel =
     quickVerdict === "safe"
-      ? "Looks safe… verifying"
+      ? "Initial signal looks calm. Verifying cashflow..."
       : quickVerdict === "risky"
-        ? "Might be risky… checking"
+        ? "Possible pressure detected. Reviewing cashflow..."
         : quickVerdict === "not_recommended"
-          ? "High risk… verifying"
-          : "Analyzing payment...";
+          ? "High payment pressure detected. Verifying..."
+          : "Reviewing payment context...";
+
+  const shellClass =
+    displayVerdict === "safe"
+      ? "border-emerald-100 bg-emerald-50"
+      : displayVerdict === "risky"
+        ? "border-amber-100 bg-amber-50"
+        : displayVerdict === "not_recommended"
+          ? "border-rose-100 bg-rose-50"
+          : "border-indigo-100 bg-indigo-50";
 
   const verdictClass =
     displayVerdict === "safe"
@@ -169,61 +172,58 @@ export default function AIPaymentAgentCard({
           ? "bg-rose-500"
           : "bg-slate-300";
 
-  const shellClass =
-    displayVerdict === "safe"
-      ? "border-emerald-100 bg-emerald-50"
-      : displayVerdict === "risky"
-        ? "border-amber-100 bg-amber-50"
-        : displayVerdict === "not_recommended"
-          ? "border-rose-100 bg-rose-50"
-          : "border-indigo-100 bg-indigo-50";
-
-  const headerClass =
-    displayVerdict === "safe"
-      ? "text-emerald-700"
-      : displayVerdict === "risky"
-        ? "text-amber-700"
-        : displayVerdict === "not_recommended"
-          ? "text-rose-700"
-          : "text-indigo-700";
-
   const estimateWidth =
     quickVerdict === "safe" ? 70 : quickVerdict === "risky" ? 45 : 25;
 
   return (
     <div className={`space-y-4 rounded-2xl border p-5 transition ${shellClass}`}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className={`text-lg font-semibold ${headerClass}`}>
-            AI Payment Agent
+          <h3 className="text-lg font-semibold text-slate-950">
+            Payment Intelligence
           </h3>
-          <p className="text-xs text-slate-500">
-            Balance + cashflow check before signing.
+          <p className="mt-1 text-xs leading-5 text-slate-600">
+            A transparent review of balance, cashflow, and payment pressure
+            before wallet signing.
           </p>
         </div>
 
-        <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-indigo-500">
-          LIVE
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600">
+          Advisory only
         </span>
       </div>
 
-      <div className="space-y-1">
-        <p className="text-sm text-slate-500">You’re about to send</p>
-        <p className="text-2xl font-semibold text-slate-950">
+      <div className="rounded-xl bg-white/80 p-4">
+        <p className="text-sm text-slate-500">Payment under review</p>
+        <p className="mt-1 text-2xl font-semibold text-slate-950">
           {numericAmount > 0 ? numericAmount.toFixed(2) : "0.00"} USDC
         </p>
-        <p className="text-xs text-slate-500">To {shortenAddress(recipient)}</p>
+        <p className="mt-1 text-xs text-slate-500">
+          Recipient {shortenAddress(recipient)}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+        <div className="rounded-xl bg-white/80 p-3 text-slate-600">
+          Balance checked
+        </div>
+        <div className="rounded-xl bg-white/80 p-3 text-slate-600">
+          30d flow checked
+        </div>
+        <div className="rounded-xl bg-white/80 p-3 text-slate-600">
+          User signs
+        </div>
       </div>
 
       {guardMode && (
-        <div className="rounded-xl bg-white/80 p-3 text-xs text-slate-600">
-          Spending Guard is watching your {minimumBalancePercent}% balance
-          threshold.
+        <div className="rounded-xl bg-white/80 p-3 text-xs leading-5 text-slate-600">
+          Spending Guard is active. Payments that may drop your wallet below the{" "}
+          {minimumBalancePercent}% safety threshold will be flagged.
         </div>
       )}
 
       <div className="space-y-3 rounded-xl bg-white p-4">
-        <p className="text-sm font-medium text-slate-600">AI Analysis</p>
+        <p className="text-sm font-medium text-slate-600">Why this matters</p>
 
         <p className={`text-sm font-semibold ${verdictClass}`}>
           {loading ? loadingLabel : verdictLabel}
@@ -233,8 +233,8 @@ export default function AIPaymentAgentCard({
           {error ||
             analysis?.reason ||
             (quickVerdict
-              ? "PocketFlow is checking the full cashflow profile now."
-              : "Enter an amount to let PocketFlow analyze payment safety.")}
+              ? "PocketFlow is verifying this against your recent cashflow profile."
+              : "Enter an amount to see whether this payment may create financial pressure.")}
         </p>
 
         {(analysis || quickVerdict) && (
@@ -251,7 +251,7 @@ export default function AIPaymentAgentCard({
 
               <p className="mt-1 text-right text-xs text-slate-500">
                 {analysis
-                  ? `Confidence: ${analysis.confidence}%`
+                  ? `Review confidence: ${analysis.confidence}%`
                   : "Live estimate"}
               </p>
             </div>
@@ -259,28 +259,28 @@ export default function AIPaymentAgentCard({
             {analysis && (
               <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
                 <div className="rounded-xl bg-slate-50 p-3">
-                  <p className="text-slate-400">Wallet balance</p>
+                  <p className="text-slate-400">Balance signal</p>
                   <p className="font-semibold capitalize text-slate-800">
                     {analysis.balanceSignal}
                   </p>
                 </div>
 
                 <div className="rounded-xl bg-slate-50 p-3">
-                  <p className="text-slate-400">Net flow 30d</p>
+                  <p className="text-slate-400">30d net flow</p>
                   <p className="font-semibold text-slate-800">
                     {analysis.stats.netFlow30d.toFixed(2)} USDC
                   </p>
                 </div>
 
                 <div className="rounded-xl bg-slate-50 p-3">
-                  <p className="text-slate-400">Cashflow</p>
+                  <p className="text-slate-400">Cashflow signal</p>
                   <p className="font-semibold capitalize text-slate-800">
                     {analysis.cashflowSignal}
                   </p>
                 </div>
 
                 <div className="rounded-xl bg-slate-50 p-3">
-                  <p className="text-slate-400">Score impact</p>
+                  <p className="text-slate-400">Score pressure</p>
                   <p className="font-semibold capitalize text-slate-800">
                     {analysis.scoreImpact}
                   </p>
@@ -291,9 +291,9 @@ export default function AIPaymentAgentCard({
         )}
       </div>
 
-      <p className="text-center text-xs text-slate-500">
-        You stay in control. AI only suggests. Wallet signs only after you
-        approve.
+      <p className="text-center text-xs leading-5 text-slate-500">
+        PocketFlow explains risk. It does not move funds. You approve manually,
+        and your wallet remains the final authority.
       </p>
     </div>
   );

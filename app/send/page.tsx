@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   useAccount,
   useReadContract,
@@ -15,10 +21,14 @@ import AIPaymentAgentCard, {
 import { Card, CardTitle } from "@/components/ui/Card";
 import { erc20Abi, usdcToken } from "@/lib/tokens";
 
+function subscribe() {
+  return () => {};
+}
+
 function verdictLabel(verdict?: PaymentAnalysis["verdict"]) {
-  if (verdict === "safe") return "Safe";
-  if (verdict === "risky") return "Risky";
-  if (verdict === "not_recommended") return "Not recommended";
+  if (verdict === "safe") return "Manageable";
+  if (verdict === "risky") return "Needs review";
+  if (verdict === "not_recommended") return "Elevated risk";
   return "Pending";
 }
 
@@ -33,9 +43,9 @@ function verdictClass(verdict?: PaymentAnalysis["verdict"]) {
 }
 
 export default function SendPage() {
+  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
   const { address, isConnected } = useAccount();
 
-  const [mounted, setMounted] = useState(false);
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [localError, setLocalError] = useState("");
@@ -56,10 +66,6 @@ export default function SendPage() {
     aiConfidence?: number;
     aiReason?: string;
   } | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const {
     data: balance,
@@ -108,13 +114,16 @@ export default function SendPage() {
         })
       : "--";
 
-  useEffect(() => {
+  function resetReview() {
     setUserApprovedAIReview(false);
-  }, [recipient, amount, guardMode, minimumBalancePercent]);
+    setPaymentAnalysis(null);
+    setLocalError("");
+  }
 
   function handleMax() {
     if (balance === undefined) return;
     setAmount(formatUnits(balance, usdcToken.decimals));
+    resetReview();
   }
 
   function handleSend() {
@@ -137,17 +146,17 @@ export default function SendPage() {
     }
 
     if (balance !== undefined && parsedAmount > balance) {
-      setLocalError("Amount exceeds your USDC balance.");
+      setLocalError("Amount exceeds your available USDC balance.");
       return;
     }
 
     if (!paymentAnalysis) {
-      setLocalError("Wait for the AI Payment Agent to analyze this payment.");
+      setLocalError("Wait for PocketFlow to review this payment.");
       return;
     }
 
     if (!userApprovedAIReview) {
-      setLocalError("Review the AI Payment Agent result before signing.");
+      setLocalError("Review the payment intelligence result before signing.");
       return;
     }
 
@@ -173,7 +182,6 @@ export default function SendPage() {
   useEffect(() => {
     async function handleConfirmed() {
       if (!isConfirmed || !hash) return;
-
       if (savedConfirmedHashRef.current === hash) return;
 
       savedConfirmedHashRef.current = hash;
@@ -222,26 +230,25 @@ export default function SendPage() {
 
   return (
     <main className="space-y-6">
-      <Card className="overflow-hidden border-indigo-100 bg-gradient-to-br from-white via-indigo-50 to-slate-50 p-6">
+      <Card className="overflow-hidden border-indigo-100 bg-linear-to-br from-white via-indigo-50 to-slate-50 p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
             <p className="w-fit rounded-full border border-indigo-100 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">
-              PocketFlow AI Send
+              Payment Intelligence
             </p>
 
             <h1 className="text-4xl font-bold tracking-tight text-slate-950">
-              Send with confidence
+              Review payment pressure before you sign.
             </h1>
 
             <p className="max-w-2xl text-sm leading-6 text-slate-600">
-              Transfer Arc testnet USDC while the AI Payment Agent checks your
-              balance, payment size, and cashflow safety before your wallet
-              signs.
+              PocketFlow reviews balance, cashflow behavior, and payment size so
+              you understand risk before your wallet confirms the transfer.
             </p>
 
             <div className="flex flex-wrap gap-2 pt-1">
               <span className="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
-                AI suggestion only
+                Risk explained clearly
               </span>
               <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
                 User approves manually
@@ -261,8 +268,8 @@ export default function SendPage() {
       <div className="grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardTitle
-            title="Transfer Details"
-            subtitle="Enter the recipient and amount for this payment."
+            title="Payment Details"
+            subtitle="Enter the recipient and amount. PocketFlow will review the payment before signing."
           />
 
           <div className="mt-6 space-y-5">
@@ -274,7 +281,10 @@ export default function SendPage() {
               <input
                 type="text"
                 value={recipient}
-                onChange={(event) => setRecipient(event.target.value)}
+                onChange={(event) => {
+                  setRecipient(event.target.value);
+                  resetReview();
+                }}
                 placeholder="0x..."
                 className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-indigo-400"
               />
@@ -300,7 +310,10 @@ export default function SendPage() {
                   type="text"
                   inputMode="decimal"
                   value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
+                  onChange={(event) => {
+                    setAmount(event.target.value);
+                    resetReview();
+                  }}
                   placeholder="0.00"
                   className="w-full bg-transparent text-lg font-semibold outline-none"
                 />
@@ -311,7 +324,7 @@ export default function SendPage() {
               </div>
 
               <p className="text-xs text-slate-500">
-                Available: {formattedBalance} {usdcToken.symbol}
+                Available liquidity: {formattedBalance} {usdcToken.symbol}
               </p>
             </div>
 
@@ -322,14 +335,17 @@ export default function SendPage() {
                     Spending Guard
                   </p>
                   <p className="mt-1 text-xs leading-5 text-slate-600">
-                    Warn me if this payment drops my wallet below my safety
-                    threshold.
+                    Flag payments that may leave your wallet below a chosen
+                    safety threshold.
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => setGuardMode((value) => !value)}
+                  onClick={() => {
+                    setGuardMode((value) => !value);
+                    resetReview();
+                  }}
                   className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                     guardMode
                       ? "bg-indigo-600 text-white"
@@ -357,9 +373,10 @@ export default function SendPage() {
                     max="50"
                     step="5"
                     value={minimumBalancePercent}
-                    onChange={(event) =>
-                      setMinimumBalancePercent(Number(event.target.value))
-                    }
+                    onChange={(event) => {
+                      setMinimumBalancePercent(Number(event.target.value));
+                      resetReview();
+                    }}
                     className="w-full"
                   />
                 </div>
@@ -372,12 +389,12 @@ export default function SendPage() {
                   Review required before signing
                 </p>
                 <p className="mt-1 text-sm leading-6 text-amber-700">
-                  PocketFlow marked this payment as{" "}
+                  PocketFlow classified this payment as{" "}
                   <span className="font-semibold">
                     {verdictLabel(paymentAnalysis.verdict)}
                   </span>
-                  . Confirm that you understand the AI suggestion before your
-                  wallet signs.
+                  . Confirm that you understand the review before your wallet
+                  prompts you to sign.
                 </p>
 
                 <button
@@ -388,7 +405,7 @@ export default function SendPage() {
                   }}
                   className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
                 >
-                  I understand, continue to review
+                  I understand, continue to final review
                 </button>
               </div>
             )}
@@ -401,14 +418,14 @@ export default function SendPage() {
                       Final Review Before Wallet Signing
                     </p>
                     <p className="text-xs text-slate-500">
-                      This is the last step before your wallet confirms the
-                      transaction.
+                      This is the last checkpoint before your wallet confirms
+                      the transaction.
                     </p>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
                     <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-                      AI Verified
+                      Reviewed
                     </span>
 
                     <span
@@ -433,7 +450,7 @@ export default function SendPage() {
 
                   <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs uppercase tracking-wide text-slate-400">
-                      Confidence
+                      Review Confidence
                     </p>
                     <p className="mt-1 text-lg font-bold text-slate-950">
                       {paymentAnalysis.confidence}%
@@ -442,7 +459,7 @@ export default function SendPage() {
 
                   <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs uppercase tracking-wide text-slate-400">
-                      Balance status
+                      Balance Signal
                     </p>
                     <p className="mt-1 font-semibold capitalize text-slate-800">
                       {paymentAnalysis.balanceSignal}
@@ -451,7 +468,7 @@ export default function SendPage() {
 
                   <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs uppercase tracking-wide text-slate-400">
-                      Cashflow status
+                      Cashflow Signal
                     </p>
                     <p className="mt-1 font-semibold capitalize text-slate-800">
                       {paymentAnalysis.cashflowSignal}
@@ -486,12 +503,12 @@ export default function SendPage() {
               {isWriting || isConfirming
                 ? "Processing Transfer..."
                 : userApprovedAIReview
-                  ? "Approve and Send (Wallet will prompt)"
-                  : "Review AI Analysis First"}
+                  ? "Approve and Send. Wallet will prompt."
+                  : "Review Payment Intelligence First"}
             </button>
 
             <p className="text-center text-xs text-slate-500">
-              PocketFlow never moves funds automatically. Your wallet signs
+              PocketFlow explains risk. You approve manually. Your wallet signs
               every transaction.
             </p>
 
@@ -515,7 +532,9 @@ export default function SendPage() {
 
             {hash && (
               <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-sm text-slate-500">Transaction Hash</p>
+                <p className="text-sm text-slate-500">
+                  Transaction Reference
+                </p>
                 <p className="mt-2 break-all text-sm">{hash}</p>
               </div>
             )}
@@ -525,7 +544,7 @@ export default function SendPage() {
         <div className="space-y-6">
           <div className="pt-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              AI Payment Review
+              Live Payment Review
             </p>
           </div>
 
@@ -541,13 +560,13 @@ export default function SendPage() {
 
           <Card>
             <CardTitle
-              title="Transfer Account"
-              subtitle="Your connected wallet and available funds."
+              title="Payment Account"
+              subtitle="Connected wallet and available stablecoin liquidity."
             />
 
             <div className="mt-6 space-y-4">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Available Balance</p>
+                <p className="text-sm text-slate-500">Available Liquidity</p>
                 <p className="mt-2 text-4xl font-bold tracking-tight">
                   {formattedBalance}
                 </p>
@@ -567,12 +586,12 @@ export default function SendPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-sm text-slate-500">Balance Status</p>
+                <p className="text-sm text-slate-500">Balance Read Status</p>
                 <p className="mt-2 text-sm font-medium">
                   {!mounted
                     ? "Loading..."
                     : isBalanceLoading
-                      ? "Loading..."
+                      ? "Reading balance..."
                       : "Ready"}
                 </p>
               </div>

@@ -1,22 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { useAccount } from "wagmi";
 import WalletConnect from "@/components/WalletConnect";
 import AutoIncomingSync from "@/components/AutoIncomingSync";
 import { Card, CardTitle } from "@/components/ui/Card";
 
-export default function ReceivePage() {
-  const { address, isConnected, chain } = useAccount();
+function subscribe() {
+  return () => {};
+}
 
-  const [mounted, setMounted] = useState(false);
+export default function ReceivePage() {
+  const mounted = useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false
+  );
+
+  const { address, isConnected, chain } = useAccount();
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // ✅ CRITICAL: prevents hydration mismatch
   const ready = mounted && isConnected && !!address;
 
   const shortAddress = useMemo(() => {
@@ -38,33 +41,32 @@ export default function ReceivePage() {
 
   return (
     <main className="space-y-6">
-      {/* HEADER */}
-      <Card className="border-indigo-100 bg-gradient-to-br from-white via-indigo-50 to-slate-50">
+      <Card className="border-indigo-100 bg-linear-to-br from-white via-indigo-50 to-slate-50">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-indigo-600">
-              PocketFlow Mini Bank
+            <p className="w-fit rounded-full border border-indigo-100 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">
+              Cashflow Intake
             </p>
 
             <h1 className="text-4xl font-bold tracking-tight text-slate-950">
-              Receive stablecoin payments
+              Receive funds and strengthen your financial signal.
             </h1>
 
             <p className="max-w-2xl text-sm leading-6 text-slate-600">
-              Share your Arc wallet address, receive testnet USDC, and let
-              PocketFlow automatically turn incoming payments into verified
-              cashflow activity.
+              Incoming stablecoin payments become part of your PocketFlow
+              behavior history, helping the system understand your cashflow
+              quality over time.
             </p>
 
             <div className="flex flex-wrap gap-2 pt-1">
               <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-                Auto incoming sync
+                Incoming flow tracked
               </span>
               <span className="rounded-full border border-indigo-100 bg-white px-3 py-1 text-xs font-medium text-indigo-700">
-                Real sender captured
+                Sender context captured
               </span>
               <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
-                Score updates from activity
+                Behavior signal improves with activity
               </span>
             </div>
           </div>
@@ -75,18 +77,16 @@ export default function ReceivePage() {
         </div>
       </Card>
 
-      {/* MAIN GRID */}
       <div className="grid gap-6 xl:grid-cols-3">
-        {/* RECEIVE ADDRESS */}
         <Card className="xl:col-span-2">
           <CardTitle
-            title="Your Receive Address"
-            subtitle="Use this wallet to receive Arc testnet USDC."
+            title="Receive Into PocketFlow"
+            subtitle="Use this address to collect stablecoin flow into your financial history."
           />
 
           {!ready && (
             <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
-              Connect your wallet to view and copy your receive address.
+              Connect your wallet to reveal your receive address.
             </div>
           )}
 
@@ -94,7 +94,7 @@ export default function ReceivePage() {
             <div className="mt-6 space-y-5">
               <div className="rounded-3xl border border-indigo-100 bg-indigo-50 p-5">
                 <p className="text-sm font-medium text-indigo-700">
-                  Connected receive wallet
+                  Active receive wallet
                 </p>
 
                 <p className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
@@ -110,64 +110,61 @@ export default function ReceivePage() {
                   onClick={handleCopy}
                   className="mt-4 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
                 >
-                  {copied ? "Address Copied" : "Copy Address"}
+                  {copied ? "Address Copied" : "Copy Receive Address"}
                 </button>
               </div>
 
-              {/* FLOW STEPS */}
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-slate-100 bg-white p-4">
                   <p className="text-sm font-semibold text-slate-950">
                     1. Share address
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Send this wallet to anyone paying you.
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    Use this wallet for incoming stablecoin payments.
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-slate-100 bg-white p-4">
                   <p className="text-sm font-semibold text-slate-950">
-                    2. Receive USDC
+                    2. Receive flow
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Incoming transfers land in your wallet.
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    PocketFlow records incoming activity once detected.
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-slate-100 bg-white p-4">
                   <p className="text-sm font-semibold text-slate-950">
-                    3. Build profile
+                    3. Build signal
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    PocketFlow records activity for your score.
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    More verified activity strengthens your behavior profile.
                   </p>
                 </div>
               </div>
 
-              {/* INFO */}
-              <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-700">
-                Keep PocketFlow open while testing auto-sync so incoming
-                payments are detected and recorded instantly.
+              <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-6 text-amber-700">
+                Keep PocketFlow open while testing. The monitor reads incoming
+                transfers and adds them to your financial timeline.
               </div>
             </div>
           )}
         </Card>
 
-        {/* SIDE PANEL */}
         <Card>
           <CardTitle
-            title="Receiving Account"
-            subtitle="Wallet, network, and supported asset."
+            title="Receiving Context"
+            subtitle="Wallet, network, and asset used for incoming flow."
           />
 
           <div className="mt-6 space-y-4">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm text-slate-500">Connected Wallet</p>
+              <p className="text-sm text-slate-500">Wallet</p>
               <p className="mt-2 text-lg font-semibold">
                 {ready ? shortAddress : "Not connected"}
               </p>
               {ready && (
-                <p className="mt-2 break-all text-xs text-slate-500">
+                <p className="mt-2 break-all text-xs leading-5 text-slate-500">
                   {address}
                 </p>
               )}
@@ -181,21 +178,18 @@ export default function ReceivePage() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Supported Asset</p>
-              <p className="mt-2 text-sm font-medium">
-                Arc Testnet USDC
-              </p>
+              <p className="text-sm text-slate-500">Tracked Asset</p>
+              <p className="mt-2 text-sm font-medium">Arc Testnet USDC</p>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* AUTO SYNC */}
       {mounted && (
         <Card>
           <CardTitle
-            title="Incoming Payment Monitoring"
-            subtitle="PocketFlow scans for incoming transfers automatically."
+            title="Incoming Flow Monitor"
+            subtitle="PocketFlow watches for incoming transfers and records them as financial behavior."
           />
 
           <div className="mt-6 space-y-4">
@@ -205,9 +199,10 @@ export default function ReceivePage() {
               <p className="text-sm font-semibold text-slate-800">
                 Why this matters
               </p>
-              <p className="mt-2 text-sm text-slate-600">
-                Every incoming payment strengthens your financial identity and
-                improves your proof-of-cashflow score.
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Incoming payments are not just balance changes. They become part
+                of your proof-of-cashflow identity and help PocketFlow understand
+                the strength of your financial activity.
               </p>
             </div>
           </div>

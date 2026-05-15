@@ -144,61 +144,65 @@ export async function analyzePaymentSafety({
             ? "risky"
             : "safe";
 
-  const reasonParts: string[] = [];
+  const observations: string[] = [];
 
   if (hasKnownBalance && paymentToBalanceRatio !== undefined) {
-    reasonParts.push(
-      `This payment uses ${balancePercentUsed}% of your current wallet balance.`
+    observations.push(
+      `This payment would use ${balancePercentUsed}% of your current wallet balance.`
     );
   }
 
   if (hasKnownBalance && balanceAfterPayment !== undefined) {
-    reasonParts.push(
-      `After payment, your estimated remaining balance would be ${balanceAfterPayment.toFixed(
+    observations.push(
+      `Your estimated balance after signing would be ${balanceAfterPayment.toFixed(
         2
       )} USDC.`
     );
   }
 
   if (breaksGuard) {
-    reasonParts.push(
-      `This payment would drop your balance below your ${minPercent}% Spending Guard threshold.`
+    observations.push(
+      `That would move your wallet below your ${minPercent}% Spending Guard threshold.`
     );
   }
 
   if (netFlow30d < 0) {
-    reasonParts.push(
-      `Your 30-day net cashflow is ${netFlow30d.toFixed(
+    observations.push(
+      `Your 30-day net flow is ${netFlow30d.toFixed(
         2
-      )} USDC, which shows more outgoing than incoming activity.`
+      )} USDC, meaning recent outgoing activity is higher than incoming activity.`
     );
   }
 
   if (incoming30d > 0 && amount > incoming30d) {
-    reasonParts.push(
-      "This payment is larger than your total incoming cashflow over the last 30 days."
+    observations.push(
+      "This payment is larger than your total incoming flow over the last 30 days."
     );
   }
 
   if (transactionCount30d < 3) {
-    reasonParts.push("There is limited recent activity, so confidence is lower.");
+    observations.push(
+      "Recent activity is limited, so PocketFlow has less history to evaluate."
+    );
   }
 
   if (incoming30d === 0 && amount > 0) {
-    reasonParts.push("No incoming cashflow was detected in the last 30 days.");
+    observations.push(
+      "No incoming flow was detected in the last 30 days."
+    );
   }
 
-  const baseReason =
-    reasonParts.length > 0
-      ? reasonParts.join(" ")
-      : "Your wallet balance and recent cashflow look healthy. This payment appears manageable.";
+  const explanation =
+    observations.length > 0
+      ? observations.join(" ")
+      : "Your recent balance and cashflow signals do not show unusual pressure for this payment.";
 
   const reason =
     verdict === "safe"
-      ? `Safe to review. ${baseReason}`
+      ? `This payment appears financially manageable. ${explanation}`
       : verdict === "risky"
-        ? `Review carefully before signing. ${baseReason}`
-        : `Not recommended right now. ${baseReason}`;
+        ? `This payment may create financial pressure. ${explanation}`
+        : `PocketFlow detected elevated financial risk. ${explanation}`;
 
   return {
     verdict,

@@ -35,112 +35,104 @@ function getScoreColor(score: number) {
 }
 
 function getTransactionTier(transactionCount: number) {
-  if (transactionCount >= 500) return "500+ transactions";
-  if (transactionCount >= 200) return "200 - 499 transactions";
-  if (transactionCount >= 100) return "100 - 199 transactions";
-  if (transactionCount >= 50) return "50 - 99 transactions";
-  if (transactionCount >= 10) return "10 - 49 transactions";
-  if (transactionCount >= 1) return "1 - 9 transactions";
-  return "No transactions yet";
+  if (transactionCount >= 500) return "500+ transaction history";
+  if (transactionCount >= 200) return "Deep behavior signal";
+  if (transactionCount >= 100) return "Strong behavior signal";
+  if (transactionCount >= 50) return "Developing behavior signal";
+  if (transactionCount >= 10) return "Early behavior signal";
+  if (transactionCount >= 1) return "Limited behavior signal";
+  return "No behavior signal yet";
 }
 
 const breakdownItems = [
-  { key: "transactionVolume", label: "Activity Volume", max: 50 },
+  { key: "transactionVolume", label: "Activity Depth", max: 50 },
   { key: "consistency", label: "Consistency", max: 20 },
-  { key: "incomingStrength", label: "Income Strength", max: 15 },
+  { key: "incomingStrength", label: "Incoming Strength", max: 15 },
   { key: "cashflowBalance", label: "Flow Balance", max: 10 },
-  { key: "recency", label: "Recent Activity", max: 5 },
+  { key: "recency", label: "Recency", max: 5 },
 ] as const;
 
 export default function CashflowScoreCard() {
   const { address, isConnected } = useAccount();
 
-  const [mounted, setMounted] = useState(false);
   const [data, setData] = useState<ScoreData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+  async function load() {
+    if (!address) return;
 
-  useEffect(() => {
-    async function load() {
-      if (!address) return;
-
-      try {
-        setLoading(true);
-        setError("");
-
-        const res = await fetch(`/api/score?wallet=${address}`);
-        const result = await res.json();
-
-        if (!res.ok) {
-          throw new Error(result.error || "Failed to fetch score.");
-        }
-
-        setData(result);
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Failed to load score.";
-        setError(message);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    function handleActivityUpdate() {
-      load();
-    }
-
-    if (mounted && isConnected && address) {
-      load();
-    } else {
-      setData(null);
+    try {
+      setLoading(true);
       setError("");
-    }
 
-    window.addEventListener("pocketflow-activity-updated", handleActivityUpdate);
+      const res = await fetch(`/api/score?wallet=${address}`);
+      const result = await res.json();
 
-    return () => {
-      window.removeEventListener(
-        "pocketflow-activity-updated",
-        handleActivityUpdate
+      if (!res.ok) {
+        throw new Error(result.error || "Failed to fetch behavior signal.");
+      }
+
+      setData(result);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load behavior signal."
       );
-    };
-  }, [mounted, address, isConnected]);
-
-  if (!mounted) {
-    return (
-      <Card className="h-full">
-        <CardTitle
-          title="Cashflow Score"
-          subtitle="A signal built from activity, consistency, and flow behavior."
-        />
-        <p className="mt-4 text-sm text-slate-500">Loading score...</p>
-      </Card>
-    );
+    } finally {
+      setLoading(false);
+    }
   }
+
+  function handleActivityUpdate() {
+    load();
+  }
+
+  if (isConnected && address) {
+    load();
+  }
+
+  window.addEventListener("pocketflow-activity-updated", handleActivityUpdate);
+
+  return () => {
+    window.removeEventListener(
+      "pocketflow-activity-updated",
+      handleActivityUpdate
+    );
+  };
+}, [address, isConnected]);
 
   return (
     <Card className="h-full">
       <CardTitle
-        title="Cashflow Score"
-        subtitle="A stricter signal built from transaction depth, consistency, and flow behavior."
+        title="Behavior Signal"
+        subtitle="A strict signal built from transaction depth, consistency, and flow quality."
       />
 
       {!isConnected && (
-        <p className="mt-4 text-sm">Connect wallet to view your score.</p>
+        <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
+          Connect wallet to view your behavior signal.
+        </div>
       )}
 
-      {loading && <p className="mt-4 text-sm">Calculating score...</p>}
+      {loading && (
+        <p className="mt-4 text-sm text-slate-500">
+          Reading cashflow behavior...
+        </p>
+      )}
 
-      {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
+      {error && (
+        <div className="mt-4 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+          {error}
+        </div>
+      )}
 
       {data && (
         <div className="mt-5 space-y-5">
-          <div className="rounded-2xl bg-slate-50 p-5">
-            <p className="text-sm text-slate-500">Current score</p>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+            <p className="text-sm text-slate-500">Current behavior score</p>
 
             <div className="mt-3 flex items-start justify-between gap-4">
               <div>
@@ -158,7 +150,7 @@ export default function CashflowScoreCard() {
               </div>
 
               <div className="space-y-2 text-right">
-                <span className="inline-flex rounded-full border border-slate-200 px-3 py-1 text-sm font-medium">
+                <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-medium text-slate-700">
                   {data.label}
                 </span>
                 <p className="text-sm text-slate-500">{data.trend}</p>
@@ -173,19 +165,21 @@ export default function CashflowScoreCard() {
             </div>
           </div>
 
-          <p className="text-sm leading-6 text-slate-600">{data.summary}</p>
+          <div className="rounded-2xl border border-slate-100 bg-white p-4">
+            <p className="text-sm leading-6 text-slate-600">{data.summary}</p>
+          </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Incoming Total</p>
-              <p className="mt-2 text-2xl font-semibold">
+              <p className="text-sm text-slate-500">Incoming Flow</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
                 {data.stats.incomingTotal.toFixed(2)} USDC
               </p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Outgoing Total</p>
-              <p className="mt-2 text-2xl font-semibold">
+              <p className="text-sm text-slate-500">Outgoing Flow</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
                 {data.stats.outgoingTotal.toFixed(2)} USDC
               </p>
             </div>
@@ -203,7 +197,7 @@ export default function CashflowScoreCard() {
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                     {item.label}
                   </p>
-                  <p className="mt-2 text-lg font-semibold">
+                  <p className="mt-2 text-lg font-semibold text-slate-950">
                     {value}/{item.max}
                   </p>
                 </div>
@@ -213,8 +207,8 @@ export default function CashflowScoreCard() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Transactions</p>
-              <p className="mt-2 text-2xl font-semibold">
+              <p className="text-sm text-slate-500">Tracked Activity</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
                 {data.stats.transactionCount}
               </p>
               <p className="mt-2 text-sm text-slate-500">
@@ -223,8 +217,8 @@ export default function CashflowScoreCard() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Activity Mix</p>
-              <p className="mt-2 text-2xl font-semibold">
+              <p className="text-sm text-slate-500">Flow Mix</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
                 {data.stats.incomingCount} in / {data.stats.outgoingCount} out
               </p>
               <p className="mt-2 text-sm text-slate-500">

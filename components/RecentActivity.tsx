@@ -23,28 +23,28 @@ function shortHash(value: string) {
 }
 
 function verdictLabel(verdict?: string | null) {
-  if (verdict === "safe") return "AI Safe";
-  if (verdict === "risky") return "AI Risky";
-  if (verdict === "not_recommended") return "AI Not Recommended";
+  if (verdict === "safe") return "Manageable";
+  if (verdict === "risky") return "Needs review";
+  if (verdict === "not_recommended") return "Elevated risk";
   return null;
 }
 
 function verdictClass(verdict?: string | null) {
-  if (verdict === "safe") return "border-emerald-100 bg-emerald-50 text-emerald-700";
-  if (verdict === "risky") return "border-amber-100 bg-amber-50 text-amber-700";
-  if (verdict === "not_recommended") return "border-rose-100 bg-rose-50 text-rose-700";
+  if (verdict === "safe")
+    return "border-emerald-100 bg-emerald-50 text-emerald-700";
+  if (verdict === "risky")
+    return "border-amber-100 bg-amber-50 text-amber-700";
+  if (verdict === "not_recommended")
+    return "border-rose-100 bg-rose-50 text-rose-700";
   return "border-slate-200 bg-slate-50 text-slate-600";
 }
 
 export default function RecentActivity() {
   const { address, isConnected } = useAccount();
 
-  const [mounted, setMounted] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     async function load() {
@@ -57,12 +57,16 @@ export default function RecentActivity() {
         const res = await fetch(`/api/transactions?wallet=${address}`);
         const data = await res.json();
 
-        if (!res.ok) throw new Error(data.error || "Failed to fetch activity.");
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load financial timeline.");
+        }
 
         setActivities(data.activities || []);
       } catch (error) {
         setError(
-          error instanceof Error ? error.message : "Failed to load activity."
+          error instanceof Error
+            ? error.message
+            : "Failed to load financial timeline."
         );
       } finally {
         setLoading(false);
@@ -73,11 +77,8 @@ export default function RecentActivity() {
       load();
     }
 
-    if (mounted && isConnected && address) {
+    if (isConnected && address) {
       load();
-    } else {
-      setActivities([]);
-      setError("");
     }
 
     window.addEventListener("pocketflow-activity-updated", handleActivityUpdate);
@@ -88,26 +89,17 @@ export default function RecentActivity() {
         handleActivityUpdate
       );
     };
-  }, [mounted, address, isConnected]);
-
-  if (!mounted) {
-    return (
-      <div className="space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
-        <h2 className="text-xl font-semibold">Recent Activity</h2>
-        <p className="text-sm text-slate-500">Loading activity...</p>
-      </div>
-    );
-  }
+  }, [address, isConnected]);
 
   return (
     <div className="space-y-5 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-slate-950">
-            Recent Activity
+            Financial Timeline
           </h2>
           <p className="text-sm text-slate-500">
-            Payments, sync events, and AI payment receipts.
+            Payments, sync events, and payment review notes.
           </p>
         </div>
 
@@ -120,11 +112,13 @@ export default function RecentActivity() {
 
       {!isConnected && (
         <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
-          Connect wallet to view activity.
+          Connect wallet to view your financial timeline.
         </div>
       )}
 
-      {loading && <p className="text-sm text-slate-500">Loading activity...</p>}
+      {loading && (
+        <p className="text-sm text-slate-500">Reading financial timeline...</p>
+      )}
 
       {error && (
         <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
@@ -135,10 +129,11 @@ export default function RecentActivity() {
       {isConnected && !loading && !error && activities.length === 0 && (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5">
           <p className="text-sm font-semibold text-slate-800">
-            No activity yet
+            No timeline yet
           </p>
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Send or receive a payment to start building your proof-of-cashflow.
+            Send or receive funds to start building your financial behavior
+            history.
           </p>
         </div>
       )}
@@ -164,7 +159,7 @@ export default function RecentActivity() {
                           : "bg-rose-50 text-rose-700"
                       }`}
                     >
-                      {isIncoming ? "Incoming" : "Outgoing"}
+                      {isIncoming ? "Incoming flow" : "Outgoing payment"}
                     </span>
 
                     {!isIncoming && aiLabel && (
@@ -199,13 +194,15 @@ export default function RecentActivity() {
                       {isIncoming ? "From" : "To"}
                     </p>
                     <p className="mt-1 break-all text-slate-700">
-                      {isFallback ? "Auto-detected balance sync" : item.counterparty}
+                      {isFallback
+                        ? "Auto-detected balance sync"
+                        : item.counterparty}
                     </p>
                   </div>
 
                   <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                      Reference
+                      Transaction Reference
                     </p>
                     <p className="mt-1 break-all text-slate-700">
                       {isFallback
@@ -219,7 +216,7 @@ export default function RecentActivity() {
                   <div className="mt-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-xs font-bold uppercase tracking-wide text-indigo-700">
-                        AI Payment Receipt
+                        Payment Review Note
                       </p>
 
                       {item.aiConfidence !== null &&

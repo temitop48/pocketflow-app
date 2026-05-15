@@ -25,14 +25,10 @@ type ChartPoint = {
 
 export default function ActivityChart() {
   const { address, isConnected } = useAccount();
+
   const [data, setData] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     async function load() {
@@ -46,7 +42,7 @@ export default function ActivityChart() {
         const result = await res.json();
 
         if (!res.ok) {
-          throw new Error(result.error || "Failed to fetch activity.");
+          throw new Error(result.error || "Failed to fetch movement data.");
         }
 
         const activities: Activity[] = result.activities || [];
@@ -76,9 +72,9 @@ export default function ActivityChart() {
 
         setData(sorted);
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to load chart.";
-        setError(message);
+        setError(
+          err instanceof Error ? err.message : "Failed to load cashflow movement."
+        );
       } finally {
         setLoading(false);
       }
@@ -88,10 +84,8 @@ export default function ActivityChart() {
       load();
     }
 
-    if (mounted && isConnected && address) {
+    if (isConnected && address) {
       load();
-    } else {
-      setData([]);
     }
 
     window.addEventListener("pocketflow-activity-updated", handleActivityUpdate);
@@ -102,31 +96,40 @@ export default function ActivityChart() {
         handleActivityUpdate
       );
     };
-  }, [mounted, address, isConnected]);
+  }, [address, isConnected]);
 
   return (
-    <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm space-y-4">
+    <div className="space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
       <div>
-        <h2 className="text-xl font-semibold">Cashflow Trend</h2>
-        <p className="text-sm text-slate-500">
-          Incoming vs outgoing activity over time
+        <h2 className="text-xl font-semibold text-slate-950">
+          Cashflow Movement
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-slate-500">
+          A quiet timeline of incoming flow versus outgoing payments.
         </p>
       </div>
 
-      {!mounted && <p className="text-sm text-slate-500">Loading chart...</p>}
-      {mounted && !isConnected && <p>Connect wallet to view chart.</p>}
-      {loading && <p>Loading chart...</p>}
-      {error && <p className="text-rose-600 text-sm">{error}</p>}
+      {!isConnected && (
+        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
+          Connect wallet to view cashflow movement.
+        </div>
+      )}
 
-      {mounted && data.length > 0 && (
-        <div className="h-72 min-h-[288px] w-full">
+      {loading && (
+        <p className="text-sm text-slate-500">Reading movement pattern...</p>
+      )}
+
+      {error && (
+        <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+          {error}
+        </div>
+      )}
+
+      {isConnected && data.length > 0 && (
+        <div className="h-72 min-h-72 w-full">
           <ResponsiveContainer width="100%" height={288}>
             <LineChart data={data}>
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 12 }}
-                stroke="#9CA3AF"
-              />
+              <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
               <YAxis tick={{ fontSize: 12 }} stroke="#9CA3AF" />
               <Tooltip
                 contentStyle={{
@@ -154,8 +157,16 @@ export default function ActivityChart() {
         </div>
       )}
 
-      {mounted && data.length === 0 && !loading && !error && (
-        <p className="text-sm text-slate-500">No activity data yet.</p>
+      {isConnected && data.length === 0 && !loading && !error && (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5">
+          <p className="text-sm font-semibold text-slate-800">
+            No movement pattern yet
+          </p>
+          <p className="mt-1 text-sm leading-6 text-slate-500">
+            Incoming and outgoing activity will appear here once PocketFlow has
+            cashflow data to read.
+          </p>
+        </div>
       )}
     </div>
   );

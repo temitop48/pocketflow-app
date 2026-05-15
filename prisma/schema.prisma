@@ -18,12 +18,10 @@ model TransactionActivity {
   eventKey     String   @unique
   status       String
   blockNumber  String?
-
-  aiVerdict    String?
+  createdAt    DateTime @default(now())
   aiConfidence Int?
   aiReason     String?
-
-  createdAt    DateTime @default(now())
+  aiVerdict    String?
 }
 
 model SharedProfile {
