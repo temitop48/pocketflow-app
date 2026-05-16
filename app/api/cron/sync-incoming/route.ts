@@ -1,12 +1,13 @@
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { importIncomingForWallet } from "@/lib/importIncoming";
 
 export async function GET(req: NextRequest) {
+  const startedAt = Date.now();
+
   try {
     const authHeader = req.headers.get("authorization");
     const expectedToken = process.env.CRON_SECRET;
@@ -17,6 +18,8 @@ export async function GET(req: NextRequest) {
 
     const wallets = await db.walletSyncState.findMany({
       select: { wallet: true },
+      orderBy: { updatedAt: "asc" },
+      take: 25,
     });
 
     const results = [];
@@ -26,10 +29,16 @@ export async function GET(req: NextRequest) {
         const result = await importIncomingForWallet(item.wallet);
 
         results.push({
-          ok: true,
           ...result,
+          wallet: item.wallet,
+          ok: true,
         });
       } catch (error) {
+        console.error("Cron wallet sync failed:", {
+          wallet: item.wallet,
+          error,
+        });
+
         results.push({
           wallet: item.wallet,
           ok: false,
@@ -38,13 +47,27 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const successCount = results.filter((item) => item.ok).length;
+    const failureCount = results.length - successCount;
+
     return NextResponse.json({
-      ok: true,
-      walletCount: wallets.length,
+      ok: failureCount === 0,
+      checkedWallets: wallets.length,
+      successCount,
+      failureCount,
+      durationMs: Date.now() - startedAt,
       results,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Cron sync failed.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Cron sync failed:", error);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : "Cron sync failed.",
+        durationMs: Date.now() - startedAt,
+      },
+      { status: 500 }
+    );
   }
 }

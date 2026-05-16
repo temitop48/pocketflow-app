@@ -4,15 +4,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calculateCashflowScore } from "@/lib/score";
 
+const ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
+
+function badRequest(error: string) {
+  return NextResponse.json({ error }, { status: 400 });
+}
+
 export async function GET(req: NextRequest) {
   try {
     const wallet = req.nextUrl.searchParams.get("wallet")?.toLowerCase();
 
-    if (!wallet) {
-      return NextResponse.json(
-        { error: "wallet query parameter is required." },
-        { status: 400 }
-      );
+    if (!wallet || !ADDRESS_REGEX.test(wallet)) {
+      return badRequest("Valid wallet query parameter is required.");
     }
 
     const activities = await db.transactionActivity.findMany({
@@ -22,6 +25,7 @@ export async function GET(req: NextRequest) {
       orderBy: {
         createdAt: "desc",
       },
+      take: 500,
     });
 
     const normalized = activities.map((item) => ({
@@ -29,8 +33,8 @@ export async function GET(req: NextRequest) {
         item.wallet === wallet
           ? item.direction
           : item.direction === "outgoing"
-          ? "incoming"
-          : "outgoing",
+            ? "incoming"
+            : "outgoing",
       amount: item.amount,
       createdAt: item.createdAt,
     }));
@@ -39,8 +43,11 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to calculate score.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Score calculation failed:", error);
+
+    return NextResponse.json(
+      { error: "Failed to calculate score." },
+      { status: 500 }
+    );
   }
 }
