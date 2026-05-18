@@ -25,7 +25,7 @@ async function findRecentNativeIncomingTx(
   fromBlock: bigint,
   toBlock: bigint
 ) {
-  const maxBlocksToSearch = BigInt(2000);
+  const maxBlocksToSearch = BigInt(500);
   const searchFrom =
     toBlock > maxBlocksToSearch ? toBlock - maxBlocksToSearch : fromBlock;
 
@@ -170,8 +170,8 @@ export async function importIncomingForWallet(wallet: string) {
     where: { wallet: normalizedWallet },
   });
 
-  const defaultLookback = BigInt(50000);
-  const maxBlockRange = BigInt(10000);
+  const defaultLookback = BigInt(300);
+  const maxBlockRange = BigInt(100);
   const zero = BigInt(0);
   const one = BigInt(1);
 
@@ -181,10 +181,11 @@ export async function importIncomingForWallet(wallet: string) {
     savedBlock > zero
       ? savedBlock + one
       : currentBlock > defaultLookback
-      ? currentBlock - defaultLookback
-      : zero;
+        ? currentBlock - defaultLookback
+        : zero;
 
-  const allLogs = [];
+  let imported = 0;
+  let scannedLogCount = 0;
   let startBlock = fromBlock;
 
   while (startBlock <= currentBlock) {
@@ -203,45 +204,44 @@ export async function importIncomingForWallet(wallet: string) {
       toBlock: batchEnd,
     });
 
-    allLogs.push(...logs);
+    scannedLogCount += logs.length;
+
+    for (const log of logs) {
+      const txHash = log.transactionHash;
+      const logIndex = Number(log.logIndex ?? zero);
+      const from = String(log.args.from || "").toLowerCase();
+      const to = String(log.args.to || "").toLowerCase();
+      const value = log.args.value ?? zero;
+
+      if (!txHash || !from || !to) continue;
+      if (to !== normalizedWallet) continue;
+      if (from === normalizedWallet) continue;
+
+      const eventKey = `${txHash}-${logIndex}`;
+
+      const existing = await db.transactionActivity.findUnique({
+        where: { eventKey },
+      });
+
+      if (existing) continue;
+
+      await db.transactionActivity.create({
+        data: {
+          wallet: normalizedWallet,
+          counterparty: from,
+          direction: "incoming",
+          amount: formatUnits(value, usdcToken.decimals),
+          txHash,
+          eventKey,
+          status: "confirmed",
+          blockNumber: String(log.blockNumber ?? ""),
+        },
+      });
+
+      imported += 1;
+    }
+
     startBlock = batchEnd + one;
-  }
-
-  let imported = 0;
-
-  for (const log of allLogs) {
-    const txHash = log.transactionHash;
-    const logIndex = Number(log.logIndex ?? zero);
-    const from = String(log.args.from || "").toLowerCase();
-    const to = String(log.args.to || "").toLowerCase();
-    const value = log.args.value ?? zero;
-
-    if (!txHash || !from || !to) continue;
-    if (to !== normalizedWallet) continue;
-    if (from === normalizedWallet) continue;
-
-    const eventKey = `${txHash}-${logIndex}`;
-
-    const existing = await db.transactionActivity.findUnique({
-      where: { eventKey },
-    });
-
-    if (existing) continue;
-
-    await db.transactionActivity.create({
-      data: {
-        wallet: normalizedWallet,
-        counterparty: from,
-        direction: "incoming",
-        amount: formatUnits(value, usdcToken.decimals),
-        txHash,
-        eventKey,
-        status: "confirmed",
-        blockNumber: String(log.blockNumber ?? ""),
-      },
-    });
-
-    imported += 1;
   }
 
   await db.walletSyncState.upsert({
@@ -272,6 +272,6 @@ export async function importIncomingForWallet(wallet: string) {
     fallbackCounterparty: fallback.counterparty,
     scannedFromBlock: fromBlock.toString(),
     scannedToBlock: currentBlock.toString(),
-    scannedLogCount: allLogs.length,
+    scannedLogCount,
   };
 }

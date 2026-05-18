@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useAccount } from "wagmi";
 
 type Activity = {
@@ -9,7 +9,12 @@ type Activity = {
   aiVerdict?: "safe" | "risky" | "not_recommended" | null;
 };
 
+function subscribe() {
+  return () => {};
+}
+
 export default function InsightFeed() {
+  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
   const { address, isConnected } = useAccount();
 
   const [stats, setStats] = useState({
@@ -24,44 +29,64 @@ export default function InsightFeed() {
     async function load() {
       if (!address) return;
 
-      const res = await fetch(`/api/transactions?wallet=${address}`);
-      const data = await res.json();
-      const activities: Activity[] = data.activities || [];
+      try {
+        const res = await fetch(`/api/transactions?wallet=${address}`);
+        const data = await res.json();
+        const activities: Activity[] = data.activities || [];
 
-      let incoming = 0;
-      let outgoing = 0;
-      let aiReviewed = 0;
-      let risky = 0;
+        let incoming = 0;
+        let outgoing = 0;
+        let aiReviewed = 0;
+        let risky = 0;
 
-      activities.forEach((tx) => {
-        const amount = Number(tx.amount);
+        activities.forEach((tx) => {
+          const amount = Number(tx.amount);
 
-        if (tx.direction === "incoming") incoming += amount;
-        if (tx.direction === "outgoing") outgoing += amount;
+          if (tx.direction === "incoming") incoming += amount;
+          if (tx.direction === "outgoing") outgoing += amount;
 
-        if (tx.direction === "outgoing" && tx.aiVerdict) {
-          aiReviewed += 1;
-          if (tx.aiVerdict !== "safe") risky += 1;
-        }
-      });
+          if (tx.direction === "outgoing" && tx.aiVerdict) {
+            aiReviewed += 1;
+            if (tx.aiVerdict !== "safe") risky += 1;
+          }
+        });
 
-      setStats({
-        incoming,
-        outgoing,
-        count: activities.length,
-        aiReviewed,
-        risky,
-      });
+        setStats({
+          incoming,
+          outgoing,
+          count: activities.length,
+          aiReviewed,
+          risky,
+        });
+      } catch (error) {
+        console.error("Failed to load insight feed:", error);
+      }
     }
 
-    if (isConnected && address) load();
+    function handleActivityUpdate() {
+      load();
+    }
 
-    window.addEventListener("pocketflow-activity-updated", load);
-    return () => window.removeEventListener("pocketflow-activity-updated", load);
-  }, [address, isConnected]);
+    if (mounted && isConnected && address) {
+      load();
+    }
+
+    window.addEventListener("pocketflow-activity-updated", handleActivityUpdate);
+
+    return () => {
+      window.removeEventListener(
+        "pocketflow-activity-updated",
+        handleActivityUpdate
+      );
+    };
+  }, [mounted, address, isConnected]);
 
   const insights = useMemo(() => {
     const notes: string[] = [];
+
+    if (!mounted) {
+      return ["Preparing financial monitoring..."];
+    }
 
     if (!isConnected) {
       return ["Connect your wallet to begin financial monitoring."];
@@ -104,7 +129,7 @@ export default function InsightFeed() {
     }
 
     return notes;
-  }, [isConnected, stats]);
+  }, [mounted, isConnected, stats]);
 
   return (
     <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
@@ -121,9 +146,9 @@ export default function InsightFeed() {
       </div>
 
       <div className="mt-5 space-y-3">
-        {insights.map((item) => (
+        {insights.map((item, index) => (
           <div
-            key={item}
+            key={`${index}-${item}`}
             className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm leading-6 text-slate-700"
           >
             {item}

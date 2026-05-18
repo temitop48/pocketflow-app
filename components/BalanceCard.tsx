@@ -1,20 +1,26 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { formatUnits } from "viem";
 import { erc20Abi, usdcToken } from "@/lib/tokens";
 import { Card, CardTitle } from "@/components/ui/Card";
 
+function subscribe() {
+  return () => {};
+}
+
 export default function BalanceCard() {
+  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
   const { address, isConnected } = useAccount();
 
   const { data, isLoading, error, refetch, isRefetching } = useReadContract({
     address: usdcToken.address,
     abi: erc20Abi,
     functionName: "balanceOf",
-    args: address ? [address] : undefined,
+    args: mounted && address ? [address] : undefined,
     query: {
-      enabled: !!address,
+      enabled: mounted && !!address,
     },
   });
 
@@ -36,23 +42,31 @@ export default function BalanceCard() {
         subtitle="Stablecoin funds currently available for payments."
       />
 
-      {!isConnected && (
+      {!mounted && (
+        <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
+          Preparing wallet balance...
+        </div>
+      )}
+
+      {mounted && !isConnected && (
         <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
           Connect wallet to view available liquidity.
         </div>
       )}
 
-      {isConnected && isLoading && (
-        <p className="mt-4 text-sm text-slate-500">Reading wallet balance...</p>
+      {mounted && isConnected && isLoading && (
+        <p className="mt-4 text-sm text-slate-500">
+          Reading wallet balance...
+        </p>
       )}
 
-      {error && (
+      {mounted && error && (
         <div className="mt-4 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
           Balance read failed: {error.message}
         </div>
       )}
 
-      {isConnected && data !== undefined && (
+      {mounted && isConnected && data !== undefined && (
         <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-5">
           <p className="text-sm text-slate-500">Spendable balance</p>
 
@@ -78,7 +92,7 @@ export default function BalanceCard() {
         </div>
       )}
 
-      {isConnected && (
+      {mounted && isConnected && (
         <button
           type="button"
           onClick={() => refetch()}

@@ -9,10 +9,9 @@ export async function GET(req: NextRequest) {
   const startedAt = Date.now();
 
   try {
-    const authHeader = req.headers.get("authorization");
-    const expectedToken = process.env.CRON_SECRET;
+    const cronSecret = req.nextUrl.searchParams.get("secret");
 
-    if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
+    if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
@@ -67,7 +66,7 @@ export async function GET(req: NextRequest) {
         error: error instanceof Error ? error.message : "Cron sync failed.",
         durationMs: Date.now() - startedAt,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
