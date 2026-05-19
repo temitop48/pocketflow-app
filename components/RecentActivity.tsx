@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 
 type Activity = {
@@ -46,33 +46,33 @@ export default function RecentActivity() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function load() {
-      if (!address) return;
+  const load = useCallback(async () => {
+    if (!address) return;
 
-      try {
-        setLoading(true);
-        setError("");
+    try {
+      setLoading(true);
+      setError("");
 
-        const res = await fetch(`/api/transactions?wallet=${address}`);
-        const data = await res.json();
+      const res = await fetch(`/api/transactions?wallet=${address}&limit=100`);
+      const data = await res.json();
 
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to load financial timeline.");
-        }
-
-        setActivities(data.activities || []);
-      } catch (error) {
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Failed to load financial timeline."
-        );
-      } finally {
-        setLoading(false);
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load financial timeline.");
       }
-    }
 
+      setActivities(data.activities || []);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load financial timeline."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [address]);
+
+  useEffect(() => {
     function handleActivityUpdate() {
       load();
     }
@@ -89,11 +89,11 @@ export default function RecentActivity() {
         handleActivityUpdate
       );
     };
-  }, [address, isConnected]);
+  }, [address, isConnected, load]);
 
   return (
     <div className="space-y-5 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-slate-950">
             Financial Timeline
@@ -103,11 +103,24 @@ export default function RecentActivity() {
           </p>
         </div>
 
-        {activities.length > 0 && (
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-            {activities.length} records
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {activities.length > 0 && (
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+              {activities.length} records
+            </span>
+          )}
+
+          {isConnected && (
+            <button
+              type="button"
+              onClick={load}
+              disabled={loading}
+              className="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 disabled:opacity-50"
+            >
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
+          )}
+        </div>
       </div>
 
       {!isConnected && (
@@ -148,19 +161,33 @@ export default function RecentActivity() {
             return (
               <div
                 key={item.id}
-                className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm transition hover:border-indigo-100 hover:bg-slate-50"
+                className={`rounded-3xl border p-4 shadow-sm transition ${
+                  isFallback
+                    ? "border-emerald-100 bg-emerald-50"
+                    : "border-slate-100 bg-white hover:border-indigo-100 hover:bg-slate-50"
+                }`}
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex flex-wrap items-center gap-2">
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-semibold ${
                         isIncoming
-                          ? "bg-emerald-50 text-emerald-700"
+                          ? "bg-emerald-100 text-emerald-700"
                           : "bg-rose-50 text-rose-700"
                       }`}
                     >
-                      {isIncoming ? "Incoming flow" : "Outgoing payment"}
+                      {isFallback
+                        ? "Incoming flow detected off PocketFlow"
+                        : isIncoming
+                          ? "Incoming flow"
+                          : "Outgoing payment"}
                     </span>
+
+                    {isFallback && (
+                      <span className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700">
+                        Balance-based detection
+                      </span>
+                    )}
 
                     {!isIncoming && aiLabel && (
                       <span
@@ -182,35 +209,47 @@ export default function RecentActivity() {
                       {isIncoming ? "+" : "-"}
                       {item.amount} USDC
                     </p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500">
                       {new Date(item.createdAt).toLocaleString()}
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-4 grid gap-3 text-sm lg:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                  <div className="rounded-2xl border border-slate-100 bg-white/80 p-3">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                       {isIncoming ? "From" : "To"}
                     </p>
                     <p className="mt-1 break-all text-slate-700">
-                      {isFallback
-                        ? "Auto-detected balance sync"
-                        : item.counterparty}
+                      {isFallback ? "External wallet inflow" : item.counterparty}
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                  <div className="rounded-2xl border border-slate-100 bg-white/80 p-3">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                       Transaction Reference
                     </p>
                     <p className="mt-1 break-all text-slate-700">
                       {isFallback
-                        ? "No onchain transaction reference"
+                        ? "Detected from balance increase"
                         : shortHash(item.txHash)}
                     </p>
                   </div>
                 </div>
+
+                {isFallback && (
+                  <div className="mt-3 rounded-2xl border border-emerald-100 bg-white p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+                      Sync Note
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-slate-600">
+                      PocketFlow detected this incoming payment from a wallet
+                      balance increase. Arc RPC did not provide a direct
+                      transaction reference, so it was recorded as a verified
+                      balance-based inflow.
+                    </p>
+                  </div>
+                )}
 
                 {!isIncoming && item.aiReason && (
                   <div className="mt-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
